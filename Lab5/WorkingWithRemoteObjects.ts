@@ -54,6 +54,7 @@ export default function WorkingWithRemoteObjects(app) {
   app.get("/lab5/assignment", getAssignment);
   app.get("/lab5/assignment/title/:newTitle", setAssignmentTitle);
   app.get("/lab5/assignment/score/:newScore", setAssignmentScore);
+  app.get("/lab5/module", getModule);
   app.get("/lab5/module/name", getModuleName);
   app.get("/lab5/module/description", getModuleDescription);
   app.get("/lab5/module/name/:newName", setModuleName);
