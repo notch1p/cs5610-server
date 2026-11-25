@@ -3,15 +3,19 @@ import Hello from "./Hello";
 import Lab5 from "./Lab5/index";
 import cors from "cors";
 import UserRoutes from "./Kambaz/Users/routes";
-import db from "./Kambaz/Database/index";
 import "dotenv/config";
 import session from "express-session";
 import CourseRoutes from "./Kambaz/Courses/routes";
 import EnrollmentRoutes from "./Kambaz/Enrollments/routes";
 import ModuleRoutes from "./Kambaz/Modules/routes";
 import AssignmentRoutes from "./Kambaz/Assignments/routes";
-const app = express();
+import mongoose from "mongoose";
+
 const CLIENT_URL = process.env.CLIENT_URL?.split(/\s*,\s*/);
+const MONGODB_URI = process.env.MONGODB_URI;
+await mongoose.connect(MONGODB_URI, { dbName: "kambaz" });
+
+const app = express();
 app.use(
   cors({
     credentials: true,
@@ -35,9 +39,9 @@ app.use(session(sessionOptions));
 app.use(express.json());
 Lab5(app);
 Hello(app);
-UserRoutes(app, db);
-CourseRoutes(app, db);
-EnrollmentRoutes(app, db);
-ModuleRoutes(app, db);
-AssignmentRoutes(app, db);
+UserRoutes(app);
+CourseRoutes(app);
+EnrollmentRoutes(app);
+ModuleRoutes(app);
+AssignmentRoutes(app);
 app.listen(process.env.PORT || 4000);

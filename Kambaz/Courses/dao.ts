@@ -1,35 +1,31 @@
 import { v4 as uuidv4 } from "uuid";
-import type { Database } from "../Database";
-export default function CoursesDao(db: Database) {
+import model from "./model";
+import enrollmentModel from "../Enrollments/model";
+export default function CoursesDao() {
   function findAllCourses() {
-    return db.courses;
+    return model.find();
   }
-  function findCoursesForEnrolledUser(userId) {
-    const { courses, enrollments } = db;
-    return courses.filter((course) =>
-      enrollments.some(
-        (enrollment) =>
-          enrollment.user === userId && enrollment.course === course._id,
-      ),
-    );
+  async function findCoursesForEnrolledUser(userId) {
+    const courseIds = await enrollmentModel.distinct("course", {
+      user: userId,
+    });
+    return model.find({ _id: { $in: courseIds } });
   }
   function createCourse(course) {
     const newCourse = { ...course, _id: uuidv4() };
-    db.courses = [...db.courses, newCourse];
-    return newCourse;
+    return model.create(newCourse);
   }
-  function deleteCourse(courseId) {
-    const { courses, enrollments } = db;
-    db.courses = courses.filter((course) => course._id !== courseId);
-    db.enrollments = enrollments.filter(
-      (enrollment) => enrollment.course !== courseId,
-    );
+  async function deleteCourse(courseId) {
+    await model.deleteOne({ _id: courseId });
+    return enrollmentModel.deleteMany({ course: courseId });
   }
+  // Resolves to the updated course, or null if there is no such course.
   function updateCourse(courseId, courseUpdates) {
-    const { courses } = db;
-    const course = courses.find((course) => course._id === courseId);
-    Object.assign(course, courseUpdates);
-    return course;
+    return model.findByIdAndUpdate(
+      courseId,
+      { $set: courseUpdates },
+      { returnDocument: "after" },
+    );
   }
   return {
     findAllCourses,

@@ -1,27 +1,30 @@
 import UsersDao from "./dao";
 
-export default function UserRoutes(app, db) {
-  const dao = UsersDao(db);
+export default function UserRoutes(app) {
+  const dao = UsersDao();
 
-  const signup = (req, res) => {
-    const user = dao.findUserByUsername(req.body.username);
+  const signup = async (req, res) => {
+    const user = await dao.findUserByUsername(req.body.username);
     if (user) {
       res.status(400).json({ message: "Username already in use" });
       return;
     }
-    req.session["currentUser"] = dao.createUser(req.body);
+    req.session["currentUser"] = await dao.createUser(req.body);
     res.json(req.session["currentUser"]);
   };
-  const updateUser = (req, res) => {
-    const userId = req.params.userId;
+  const updateUser = async (req, res) => {
+    const { userId } = req.params;
     const userUpdates = req.body;
-    dao.updateUser(userId, userUpdates);
-    req.session["currentUser"] = dao.findUserById(userId);
-    res.json(req.session["currentUser"]);
+    await dao.updateUser(userId, userUpdates);
+    const currentUser = req.session["currentUser"];
+    if (currentUser && currentUser._id === userId) {
+      req.session["currentUser"] = { ...currentUser, ...userUpdates };
+    }
+    res.json(currentUser);
   };
-  const signin = (req, res) => {
+  const signin = async (req, res) => {
     const { username, password } = req.body;
-    const currentUser = dao.findUserByCredentials(username, password);
+    const currentUser = await dao.findUserByCredentials(username, password);
     if (currentUser) {
       req.session["currentUser"] = currentUser;
       res.json(currentUser);
@@ -41,15 +44,50 @@ export default function UserRoutes(app, db) {
     req.session.destroy();
     res.sendStatus(200);
   };
-  const findUsersForCourse = (req, res) => {
-    const users = dao.findUsersForCourse(req.params.courseId);
-    // Don't send other people's passwords to the browser.
-    res.json(users.map(({ password, ...user }) => user));
+  const findUsersForCourse = async (req, res) => {
+    // Passwords are left out because the schema marks them `select: false`.
+    res.json(await dao.findUsersForCourse(req.params.courseId));
   };
+  const findAllUsers = async (req, res) => {
+    const { role, name } = req.query;
+    if (role) {
+      const users = await dao.findUsersByRole(role);
+      res.json(users);
+      return;
+    }
+    if (name) {
+      const users = await dao.findUsersByPartialName(name);
+      res.json(users);
+      return;
+    }
+    const users = await dao.findAllUsers();
+    res.json(users);
+  };
+  const findUserById = async (req, res) => {
+    const user = await dao.findUserById(req.params.userId);
+    res.json(user);
+  };
+  const createUser = async (req, res) => {
+    // Same check as signup; otherwise a taken username fails with a 500 from
+    // the unique index on `username`.
+    if (await dao.findUserByUsername(req.body.username)) {
+      res.status(400).json({ message: "Username already in use" });
+      return;
+    }
+    const user = await dao.createUser(req.body);
+    res.json(user);
+  };
+  app.post("/api/users", createUser);
+  app.get("/api/users/:userId", findUserById);
+  app.get("/api/users", findAllUsers);
   app.post("/api/users/profile", profile);
   app.post("/api/users/signout", signout);
   app.put("/api/users/:userId", updateUser);
   app.post("/api/users/signup", signup);
   app.post("/api/users/signin", signin);
   app.get("/api/courses/:courseId/users", findUsersForCourse);
+  app.delete("/api/users/:userId", async (req, res) => {
+    const status = await dao.deleteUser(req.params.userId);
+    res.json(status);
+  });
 }

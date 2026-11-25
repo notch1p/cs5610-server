@@ -1,21 +1,25 @@
-import type { Database } from "../Database";
 import ModulesDao from "./dao";
 
-export default function ModuleRoutes(app, db: Database) {
-  const dao = ModulesDao(db);
-  const findModulesForCourse = (req, res) => {
-    res.json(dao.findModulesForCourse(req.params.courseId));
+export default function ModuleRoutes(app) {
+  const dao = ModulesDao();
+  const findModulesForCourse = async (req, res) => {
+    res.json(await dao.findModulesForCourse(req.params.courseId));
   };
-  const createModuleForCourse = (req, res) => {
+  const createModuleForCourse = async (req, res) => {
     const module = { ...req.body, course: req.params.courseId };
-    res.json(dao.createModule(module));
+    res.json(await dao.createModule(module));
   };
-  const deleteModule = (req, res) => {
-    dao.deleteModule(req.params.moduleId);
+  const deleteModule = async (req, res) => {
+    await dao.deleteModule(req.params.moduleId);
     res.sendStatus(200);
   };
-  const updateModule = (req, res) => {
-    res.json(dao.updateModule(req.params.moduleId, req.body));
+  const updateModule = async (req, res) => {
+    const module = await dao.updateModule(req.params.moduleId, req.body);
+    if (!module) {
+      res.sendStatus(404);
+      return;
+    }
+    res.json(module);
   };
   app.get("/api/courses/:courseId/modules", findModulesForCourse);
   app.post("/api/courses/:courseId/modules", createModuleForCourse);
