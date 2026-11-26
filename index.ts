@@ -9,6 +9,8 @@ import CourseRoutes from "./Kambaz/Courses/routes";
 import EnrollmentRoutes from "./Kambaz/Enrollments/routes";
 import ModuleRoutes from "./Kambaz/Modules/routes";
 import AssignmentRoutes from "./Kambaz/Assignments/routes";
+import QuizRoutes from "./Kambaz/Quizzes/routes";
+import QuizAttemptRoutes from "./Kambaz/QuizAttempts/routes";
 import mongoose from "mongoose";
 
 const CLIENT_URL = process.env.CLIENT_URL?.split(/\s*,\s*/);
@@ -36,7 +38,8 @@ if (process.env.SERVER_ENV !== "development") {
   };
 }
 app.use(session(sessionOptions));
-app.use(express.json());
+// Above the 100 kB default: quiz drafts carry the editor's HTML.
+app.use(express.json({ limit: "2mb" }));
 Lab5(app);
 Hello(app);
 UserRoutes(app);
@@ -44,4 +47,6 @@ CourseRoutes(app);
 EnrollmentRoutes(app);
 ModuleRoutes(app);
 AssignmentRoutes(app);
+QuizRoutes(app);
+QuizAttemptRoutes(app);
 app.listen(process.env.PORT || 4000);
